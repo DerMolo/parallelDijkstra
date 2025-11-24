@@ -13,78 +13,131 @@ using namespace std;
 
 class node {
 public: 
+    int ID; 
     double weight;
     //hashmap that stores the distances of a node's adjacent members 
-    unordered_map<node*, double> nodeDistances;
-    vector<node*> connectedNodes{};
-    node(vector <node*>neighbours, double weight) {
+    //unordered_map<node*, double> nodeDistances;
+    //dijkstra algo should handle distance calculations
+    vector<node*> adjacentNodes{};
+    /*
+    *     node(vector <node*>neighbours, double weight) {
         this->weight = weight;
-        connectedNodes = neighbours; 
+        adjacentNodes = neighbours; 
         //calculating node distance per weight 
-        for (auto i = connectedNodes.begin(); i < connectedNodes.end(); i++) {
+        for (auto i = adjacentNodes.begin(); i < adjacentNodes.end(); i++) {
             node* accessedNeighbour = *i; 
             nodeDistances[accessedNeighbour] = weight - accessedNeighbour->weight;
         }
     }
-    node(double weight) {this->weight = weight;}
-
-    void setNeighbours(vector<node*>neighbours) { this->connectedNodes = neighbours; }
 
     void setDistances() {
-        for (auto i = connectedNodes.begin(); i < connectedNodes.end(); i++) {
+        for (auto i = adjacentNodes.begin(); i < adjacentNodes.end(); i++) {
             node* accessedNeighbour = *i;
             nodeDistances[accessedNeighbour] = this->weight - accessedNeighbour->weight;
         }
     }
+    */
+
+    node(double weight, int ID) { this->weight = weight; this->ID = ID; }
+
+    void setNeighbours(vector<node*>neighbours) { this->adjacentNodes = neighbours; }
+
     ~node() {
-        connectedNodes.erase(connectedNodes.begin() + connectedNodes.size());
-        nodeDistances.clear();
+        adjacentNodes.erase(adjacentNodes.begin() + adjacentNodes.size());
+        //nodeDistances.clear();
     }
 };
 
-vector<node> dijkstra(const node& source) {
+vector<node> shortestPath(node& source, node& destination, int graphSize) {
+    vector<node> establishedNodes = { source };
+    /*
+    * For a given source node:
+    1) visit all unknown neighbouring nodes
+    2) establish a temporary memory of distances corresponding to each node
+    3) choose the node with the minimal distance
+    4) repeat the previous steps for the chosen node
+    5) return a list of visited nodes
+    */
+    node target = source;
+    vector<node> visitedNodes = { source };
 
+    while (true) {
+
+        double min = target.weight;
+        node minNode = target;
+        int neighbourCount = source.adjacentNodes.size();
+        unordered_map<node*, int> tempVisitedNodes;
+
+        for (int i = 0; i < neighbourCount; i++) {
+            node* neighbour = target.adjacentNodes[i];
+            double distance = abs(target.weight - neighbour->weight);
+            tempVisitedNodes[neighbour] += 1;
+            if (distance < min) {
+                minNode = *neighbour;
+                min = distance;
+            }
+            target = minNode;
+            establishedNodes.push_back(minNode);
+            if (tempVisitedNodes.size() == graphSize)
+                return establishedNodes;
+        }
+    }
 }
-double randDouble() {return (double)rand() / (double)RAND_MAX;}
+double randDouble(){return (double)rand() / (double)RAND_MAX;}
 int main()
 {
     srand(NULL);
-    int nodeCount = 10; 
-    vector<node*> nodeGraph(nodeCount);
+    int graphSize = 10; 
+    vector<node*> nodeGraph(graphSize);
     //initializing graph of nodes  
-    for (int i = 0; i < nodeCount; i++) {
+    for (int i = 0; i < graphSize; i++) {
         double randomWeight = randDouble();
-        nodeGraph.push_back(new node(randomWeight));
+        nodeGraph.push_back(new node(randomWeight, i));
     }
     //populating nodeGraph with randomly connected neighbours 
-    for (int i = 0; i < nodeCount; i++) {
-        int randomNeighbourCount = 1 + (int)rand() % nodeCount;
+    for (int i = 0; i < graphSize; i++) {
+        int randomNeighbourCount = 1 + (int)rand() % graphSize;
+        cout << "i: "<<i << " randomNeighbourCount: " << randomNeighbourCount << endl;
         for (int x = 0; x < randomNeighbourCount; x++) {
             /*
             Rules: 
-            no duplicate & self-connecting nodes 
+            reject duplicates & self-connecting nodes 
             */
             //hash map ensuring duplicate values are not included
             unordered_map<int, int> histogram;
-            int randomIndex = (int)rand() % nodeCount;
+            int randomIndex = (int)rand() % graphSize;
+            cout << "randomIndex: " << randomIndex << endl;
             histogram[randomIndex] += 1;
-            if (histogram[randomIndex] > 0)
+            cout << "randomIndex: " << randomIndex << " histogram: " << histogram[randomIndex]<<endl;
+            if (histogram[randomIndex] > 1) //ignores duplicate values 
                 continue; 
-            if (randomIndex == i)
+            if (randomIndex == i) //ignores self-references
                 continue; 
-            nodeGraph[i]->connectedNodes.push_back(nodeGraph[randomIndex]);
+            nodeGraph[i]->adjacentNodes.push_back(nodeGraph[randomIndex]);
         }
-        nodeGraph[i]->setDistances()
+		//distances are set after neighbours are populated
+        // shortestRoute() will handle this 
+        //nodeGraph[i]->setDistances();
+    }
+    cout << "PRINTING ENTIRE GRAPH: " << endl;
+    for (auto i = nodeGraph.begin(); i < nodeGraph.end(); i++) {
+        node temp = **i;
+        cout << "NODE ID: " << temp.ID << endl;
+        for (auto x = temp.adjacentNodes.begin(); x < temp.adjacentNodes.end(); x++) {
+            node subTemp = **x;
+            cout << "\t NODE ID: " << subTemp.ID << "  WEIGHTS: "<< subTemp.weight << endl;
+        }
+    }
+    int source = 1 + (int)rand() % graphSize;
+    int dest = 1 + (int)rand() % graphSize;
+    cout << "source: " << source << " : " << nodeGraph[source]->weight << " \ndest: " << dest << " : " << nodeGraph[dest]->weight << endl;
+
+    vector<node> estNodes = shortestPath(*nodeGraph[source], *nodeGraph[dest], graphSize);
+    cout << "FOUND SHORTEST PATH: \n";
+    int ind = 0;
+    for (auto i = estNodes.begin(); i < estNodes.end(); i++) {
+        cout << "i: " << ind << " WEIGHT: " << i->weight << endl;
+        ind++;
     }
 }
 
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
