@@ -9,7 +9,18 @@ using namespace std;
 /* 
 
 */
+class node; 
+struct PairHash {
+    size_t operator()(pair<node*, node*>& p) {
+        uintptr_t a = (uintptr_t)p.first;
+        uintptr_t b = (uintptr_t)p.second;
+        
+        size_t h1 = hash<uintptr_t>{}(a);
+        size_t h2 = hash<uintptr_t>{}(b);
+        return h1 ^ (h2 << 1);
+    }
 
+};
 
 class node {
 public: 
@@ -41,6 +52,13 @@ public:
     node(double weight, int ID) { this->weight = weight; this->ID = ID; }
 
     void setNeighbours(vector<node*>neighbours) { this->adjacentNodes = neighbours; }
+
+    //establishes a symmetric connection between nodes
+    //nodeA -> nodeB && nodeB -> nodeA 
+    void setPair(node* a, node* b) {
+        a->adjacentNodes.push_back(b);
+        b->adjacentNodes.push_back(a);
+    }
 
     ~node() {
         adjacentNodes.erase(adjacentNodes.begin() + adjacentNodes.size());
@@ -88,32 +106,55 @@ int main()
 {
     srand(NULL);
     int graphSize = 10; 
-    vector<node*> nodeGraph(graphSize);
+    vector<node*> nodeGraph;
     //initializing graph of nodes  
     for (int i = 0; i < graphSize; i++) {
         double randomWeight = randDouble();
+        //node* tempNode = new node(randomWeight,i);
         nodeGraph.push_back(new node(randomWeight, i));
     }
+    for (auto temp : nodeGraph)
+        cout << "ID: " << temp->ID << " WEIGHT: " << temp -> weight << endl;
+
     //populating nodeGraph with randomly connected neighbours 
     for (int i = 0; i < graphSize; i++) {
         int randomNeighbourCount = 1 + (int)rand() % graphSize;
         cout << "i: "<<i << " randomNeighbourCount: " << randomNeighbourCount << endl;
+        //unordered_map<int, int> histogram;
+
+        //unordered_map<node*, node*> connectedPairs;
+        unordered_map<std::pair<node*, node*>, bool> connectedPairs;//hash_map used for checking the existence of a pair
         for (int x = 0; x < randomNeighbourCount; x++) {
+            cout << "\tx: " << x << endl;
             /*
             Rules: 
-            reject duplicates & self-connecting nodes 
+            reject duplicates, self-connecting nodes, and already-formed pairs
             */
             //hash map ensuring duplicate values are not included
-            unordered_map<int, int> histogram;
             int randomIndex = (int)rand() % graphSize;
-            cout << "randomIndex: " << randomIndex << endl;
-            histogram[randomIndex] += 1;
-            cout << "randomIndex: " << randomIndex << " histogram: " << histogram[randomIndex]<<endl;
-            if (histogram[randomIndex] > 1) //ignores duplicate values 
-                continue; 
-            if (randomIndex == i) //ignores self-references
-                continue; 
-            nodeGraph[i]->adjacentNodes.push_back(nodeGraph[randomIndex]);
+
+            //cout << "randomIndex: " << randomIndex << endl;
+            //histogram[randomIndex] += 1;
+            //if (histogram[randomIndex] > 1) //ignores duplicate values 
+            //    continue; 
+            if ( connectedPairs[{nodeGraph[i],nodeGraph[randomIndex]}] && connectedPairs[{nodeGraph[randomIndex], nodeGraph[i]}]){  //<A,B> == <B,A> 
+                cout << "PAIR ALREADY EXIST: " << randomIndex << ", " << i << endl;
+                continue;
+            }
+            if (randomIndex == i) {
+                cout << "SKIPPING SELF-REFERENCE" << endl;
+                continue;
+            } //ignores self-references
+
+            cout << "\trandomIndex: " << randomIndex << endl;//" histogram: " << histogram[randomIndex] << endl;
+            //connectedPairs[nodeGraph[randomIndex]] = nodeGraph[i];
+            //connectedPairs[nodeGraph[i]]
+            connectedPairs[{nodeGraph[i], nodeGraph[randomIndex]}] = true;
+            connectedPairs[{nodeGraph[randomIndex], nodeGraph[i]}] = true;
+;           nodeGraph[i]->setPair(nodeGraph[i], nodeGraph[randomIndex]); 
+
+            //nodeGraph[i]->adjacentNodes.push_back(nodeGraph[randomIndex]);
+            //nodeGraph[randomIndex]->adjacentNodes.push_back(nodeGraph[i]);
         }
 		//distances are set after neighbours are populated
         // shortestRoute() will handle this 
