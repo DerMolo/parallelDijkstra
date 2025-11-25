@@ -10,18 +10,22 @@ using namespace std;
 
 */
 class node; 
-struct PairHash {
-    size_t operator()(pair<node*, node*>& p) {
-        uintptr_t a = (uintptr_t)p.first;
-        uintptr_t b = (uintptr_t)p.second;
-        
-        size_t h1 = hash<uintptr_t>{}(a);
-        size_t h2 = hash<uintptr_t>{}(b);
-        return h1 ^ (h2 << 1);
-    }
+namespace std {
+    template<>
+    struct hash<node> {
+        size_t operator()(pair<node*, node*>& p) {
+            uintptr_t a = (uintptr_t)p.first;
+            uintptr_t b = (uintptr_t)p.second;
 
-};
-
+            size_t h1 = hash<uintptr_t>{}(a);
+            size_t h2 = hash<uintptr_t>{}(b);
+            return h1 ^ (h2 << 1);
+        }
+        bool operator()(pair<node*, node*>& a, pair<node*, node*>& b) {
+            return a.first == b.first && a.second == b.second;
+    };
+    };
+}
 class node {
 public: 
     int ID; 
@@ -80,7 +84,6 @@ vector<node> shortestPath(node& source, node& destination, int graphSize) {
     vector<node> visitedNodes = { source };
 
     while (true) {
-
         double min = target.weight;
         node minNode = target;
         int neighbourCount = source.adjacentNodes.size();
